@@ -1,0 +1,78 @@
+import os
+import streamlit as st
+from io import StringIO
+from streamlit_folium import st_folium
+from streamlit.components.v1 import html
+from map_utils import load_data, filter_data, create_map, get_colormap_html
+
+# Set wide layout
+st.set_page_config(layout="wide")
+
+# Cache and simplify data
+@st.cache_data
+def get_data():
+    gdf = load_data()
+    gdf["geometry"] = gdf["geometry"].simplify(tolerance=0.001, preserve_topology=True)
+    return gdf
+
+# Load data
+gdf = get_data()
+years = sorted(gdf["FY"].dropna().unique(), reverse=True)
+group_options = sorted(gdf["GroupType"].dropna().unique().tolist())
+default_groups = ["Districts", "Unified Regions", "Regions"]
+
+# Get query params
+params = st.query_params
+
+# App layout
+st.title("MA School Districts – Net School Spending")
+st.markdown("Actual Net School Spending as a Percentage of Required NSS")
+st.caption("Use the sidebar to explore how Massachusetts school districts meet or exceed spending requirements.")
+
+# Sidebar filters
+with st.sidebar:
+    html(get_colormap_html(), height=150)
+
+    st.markdown("### Filters", unsafe_allow_html=True)
+    with st.form(key="controls_form"):
+        FY = st.selectbox("Fiscal Year", years, index=0 if "fy" not in params else years.index(int(params["fy"])))
+        FE_min, FE_max = st.slider("Enrollment", 0, 10000, (0, 10000), step=500)
+        selected_groups = st.multiselect(
+            "Select Group Types",
+            options=group_options,
+            default=params.get("group", default_groups)
+        )
+        st.caption("Max of 10,000 includes all districts ≥10,000")
+        submitted = st.form_submit_button("Apply", use_container_width=True)
+
+    if submitted:
+        st.session_state.update(FY=FY, FE_min=FE_min, FE_max=FE_max, GroupType=selected_groups)
+        st.query_params.update(fy=FY, fe_min=FE_min, fe_max=FE_max, group=selected_groups)
+    else:
+        FY = st.session_state.get("FY", years[0])
+        FE_min = st.session_state.get("FE_min", 0)
+        FE_max = st.session_state.get("FE_max", 10000)
+        selected_groups = st.session_state.get("GroupType", default_groups)
+
+    gdf_filtered = filter_data(gdf, FY, FE_min, FE_max)
+    gdf_filtered = gdf_filtered[gdf_filtered["GroupType"].isin(selected_groups)]
+
+    st.markdown("### Download filtered data")
+    geojson_str = gdf_filtered.to_json()
+    st.download_button("Download GeoJSON", data=geojson_str, file_name="filtered_districts.geojson", mime="application/geo+json")
+
+    csv_buffer = StringIO()
+    gdf_filtered.drop(columns="geometry").to_csv(csv_buffer, index=False)
+    st.download_button("Download CSV", data=csv_buffer.getvalue(), file_name="filtered_districts.csv", mime="text/csv")
+
+    # Optional: Data preview table (commented out)
+    # st.markdown("### Data Preview")
+    # st.dataframe(gdf_filtered.drop(columns="geometry"))
+
+# Full-width map
+with st.spinner("Rendering map..."):
+    m = create_map(gdf_filtered)
+    if not gdf_filtered.empty:
+        bounds = gdf_filtered.total_bounds
+        m.fit_bounds([[bounds[1], bounds[0]], [bounds[3], bounds[2]]])
+    st_folium(m, width=1400, height=700)

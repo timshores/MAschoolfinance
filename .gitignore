@@ -1,0 +1,20 @@
+# Ignore virtual environment
+.venv/
+
+# Ignore Python cache files
+__pycache__/
+*.pyc
+
+# Ignore Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Ignore data files
+*.csv
+*.xlsx
+*.shp
+*.dbf
+*.prj
+*.shx
+
+# VS Code config
+.vscode/

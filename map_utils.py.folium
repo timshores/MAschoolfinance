@@ -1,0 +1,72 @@
+import os
+import geopandas as gpd
+import folium
+from branca.colormap import linear
+
+def load_data():
+    return gpd.read_file(os.path.join("data", "matched_districts.geojson"))
+
+def filter_data(gdf, fy, fe_min, fe_max):
+    filtered = gdf[
+        (gdf["FY"] == fy) &
+        (gdf["FE"] >= fe_min) &
+        (gdf["FE"] <= fe_max)
+    ]
+    return filtered
+
+def create_map(gdf):
+    m = folium.Map(location=[42.3, -71.7], zoom_start=8, tiles="CartoDB.Positron")
+
+    # Move colormap definition here for reliability
+    colormap = linear.YlGnBu_09.scale(0, 300).to_step(index=[0, 50, 100, 150, 200, 250, 300])
+    colormap.caption = "Actual NSS as % of Required NSS"
+    colormap.position = 'topleft'
+
+    def style_function(feature):
+        value = feature["properties"].get("NSS_percent", 0)
+        return {
+            "fillOpacity": 0.7,
+            "weight": 0.5,
+            "color": "white",
+            "fillColor": colormap(value)
+        }
+
+    tooltip_fields = [
+        "DistOrg", "GroupType", "FE", "ActualNSS", "ReqNSS", "NSS_percent"
+    ]
+    tooltip_aliases = [
+        "District:", "Group:", "Enrollment:", "Actual NSS ($):", "Required NSS ($):", "NSS (%):"
+    ]
+
+    folium.GeoJson(
+        gdf,
+        name="districts",
+        style_function=style_function,
+        tooltip=folium.GeoJsonTooltip(
+            fields=tooltip_fields,
+            aliases=tooltip_aliases,
+            localize=True,
+            labels=True,
+            sticky=True
+        )
+    ).add_to(m)
+
+    colormap.add_to(m)
+    return m
+
+def get_streamlit_legend():
+    return (
+        "<div style='padding:10px; background:#f9f9f9; border-radius:6px'>"
+        "<b>Color Scale:</b><br>"
+        "0–50%<br>"
+        "51–100%<br>"
+        "101–150%<br>"
+        "151–200%<br>"
+        "201–250%<br>"
+        "251–300%+"
+        "</div>"
+    )
+
+def get_colormap_html():
+    colormap = linear.YlGnBu_09.scale(0, 300).to_step(index=[0, 50, 100, 150, 200, 250, 300])
+    return colormap._repr_html_()
