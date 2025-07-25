@@ -15,6 +15,7 @@ __pycache__/
 *.dbf
 *.prj
 *.shx
+*.pkl
 
 # VS Code config
 .vscode/
