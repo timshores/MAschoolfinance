@@ -46,14 +46,22 @@ if clicked:
     st.session_state.animate_next = st.session_state.play
 
 # Sidebar: year selector
-# Determine current year for display and filtering
-current_year = years_asc[st.session_state.year_index]
+# --- Manual left/right year navigation ---
+col1, col2, col3 = st.sidebar.columns([1, 3, 1])
+with col1:
+    if st.button("◀", key="prev_year") and st.session_state.year_index > 0:
+        st.session_state.year_index -= 1
+with col3:
+    if st.button("▶", key="next_year") and st.session_state.year_index < len(years_asc) - 1:
+        st.session_state.year_index += 1
 
-# Always show dropdown; update its selection based on current year
+# Update selected_year and dropdown sync
+current_year = years_asc[st.session_state.year_index]
 selected_year = st.sidebar.selectbox(
     "Select fiscal year", years_desc,
     index=years_desc.index(current_year)
 )
+
 
 # If not playing, sync year_index to manual selection
 if not st.session_state.play:

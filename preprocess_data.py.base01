@@ -1,3 +1,4 @@
+
 import os
 import pandas as pd
 import geopandas as gpd
@@ -89,13 +90,9 @@ matched_df = pd.DataFrame(matches)
 matched_gdf = gpd.GeoDataFrame(matched_df, geometry="geometry", crs=shapes.crs).to_crs(epsg=4326)
 
 # ----------------------------
-# Simplify geometry to reduce file size
-# ----------------------------
-matched_gdf["geometry"] = matched_gdf["geometry"].simplify(tolerance=0.001, preserve_topology=True)
-
-# ----------------------------
 # Create % col for Streamlit map
 # ----------------------------
+
 matched_gdf["NSS_percent"] = (matched_gdf["ActualNSS_portion_ReqNSS"] * 100).round(0).astype("Int64")
 
 # ----------------------------
@@ -114,25 +111,18 @@ def assign_group(row):
 matched_gdf["GroupType"] = matched_gdf.apply(assign_group, axis=1)
 
 # ----------------------------
-# Drop unnecessary columns before saving
-# ----------------------------
-matched_gdf = matched_gdf[["DistOrg", "FY", "ActualNSS_portion_ReqNSS", "NSS_percent", "GroupType", "geometry"]]
-
-# ----------------------------
-# Save Output (GeoJSON only)
+# Save Output
 # ----------------------------
 matched_gdf.to_file(OUTPUT_GEOJSON, driver="GeoJSON")
-
-# Optional: Comment out if not needed for deployment
-# with open(OUTPUT_PKL, "wb") as f:
-#     pickle.dump(matched_gdf, f)
+with open(OUTPUT_PKL, "wb") as f:
+    pickle.dump(matched_gdf, f)
 
 # ----------------------------
 # Debug Preview
 # ----------------------------
 if DEBUG_MODE:
     print("\n=== Previewing matched data ===")
-    print(matched_gdf.head(10))
+    print(matched_gdf[["DistOrg", "FY", "ActualNSS_portion_ReqNSS", "GroupType"]].head(10))
 
     if unmatched_log:
         print("\n=== Unmatched or Low-Confidence Matches ===")
