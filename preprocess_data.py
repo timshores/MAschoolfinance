@@ -116,7 +116,7 @@ matched_gdf["GroupType"] = matched_gdf.apply(assign_group, axis=1)
 # ----------------------------
 # Drop unnecessary columns before saving
 # ----------------------------
-matched_gdf = matched_gdf[["DistOrg", "FY", "ActualNSS_portion_ReqNSS", "NSS_percent", "GroupType", "geometry"]]
+matched_gdf = matched_gdf[["DistOrg", "FY", "ActualNSS_portion_ReqNSS", "NSS_percent", "GroupType", "FE", "geometry"]]
 
 # ----------------------------
 # Save Output (GeoJSON only)
